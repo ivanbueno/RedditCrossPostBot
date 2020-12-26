@@ -47,6 +47,9 @@ fruitsalad:
 * In the example above, crosspost bot will search for "apple" and "orange" in the titles of the hottest post from "fruitstand" and "trees" subreddits.
 * If posts are found with the matching keywords, the bot will crosspost (xpost) the submissions to "fruitsalad" subreddit.
 
+### Tips
+* Add your bot as a moderator to the destination subreddit to prevent any throttling restrictions.
+
 ### References
 * [Comprehensive Guide to Running your Bot](https://www.reddit.com/r/RequestABot/comments/3d3iss/a_comprehensive_guide_to_running_your_bot_that/)
 * [Register your bot](https://www.reddit.com/prefs/apps/)
