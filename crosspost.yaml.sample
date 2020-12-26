@@ -1,0 +1,12 @@
+destinationsubreddit1:
+  keywords:
+    - Keyword to Search For
+    - Another keyword
+  sources:
+    - subredditsource1
+    - subredditsource2
+destinationsubreddit2:
+  keywords:
+    - keyword1
+  sources:
+    - subredditsource3

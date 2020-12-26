@@ -1,0 +1,8 @@
+[default]
+xpost_db=/full/path/to/crosspost.db
+xpost_searches=/full/path/to/crosspost.yaml
+client_id=
+client_secret=
+user_agent=
+username=
+password=

@@ -1,0 +1,5 @@
+.vscode
+crosspost.yaml
+crosspost.ini
+crosspost.db
+classes/__pycache__/
