@@ -3,3 +3,4 @@ crosspost.yaml
 crosspost.ini
 crosspost.db
 classes/__pycache__/
+*.log
