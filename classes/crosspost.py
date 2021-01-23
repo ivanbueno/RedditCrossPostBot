@@ -109,8 +109,29 @@ class CrossPost:
                     # then search for keywords
                     if pattern.search(subm.title):
                         print('      *', source, '--', subm.title)
+                        if self.is_repost(destination, subm):
+                            print('      ** Duplicate')
+                            continue
+
                         self.submit_post(subm, destination)
                         throttle_count += 1
+                        
+    def is_repost(self, destination, submission):
+        submission_results = None
+        submission_values = []
+        if destination not in self.sources:
+            submission_results = self.reddit.subreddit(destination).hot()
+
+            for s in submission_results:
+                submission_values.append(s)
+
+            self.sources.update({destination: submission_values})
+
+        for subm in self.sources[destination]:
+            if subm.url == submission.url:
+                return True
+
+        return False        
 
     def submit_post(self, submission, destination):
         try:
