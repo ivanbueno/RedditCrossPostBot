@@ -33,22 +33,30 @@ class CrossPost:
         with open(self.configuration.get("default", "xpost_searches")) as file:
             return yaml.full_load(file).items()
 
+    def is_search(self, item):
+        search = None
+        if "search" in item:
+            search = item["search"]
+        return search
+
     def load_resources(self):
         sources = {}
         source_processed = {}
 
         for destination, item in self.schema:
-            search = None
-            if "search" in item:
-                search = item["search"]
+            search = self.is_search(item)
 
             for source in item["sources"]:
                 submission_values = []
 
-                if source not in source_processed.keys():
+                source_key = source
+                if search:
+                    source_key = destination + '_' + source
+
+                if source_key not in source_processed.keys():
                     print('-----')
-                    print('Loading', source)
-                    source_processed[source] = 1
+                    print('Loading', source_key)
+                    source_processed[source_key] = 1
 
                     submission_results = None
                     if search:
@@ -60,7 +68,7 @@ class CrossPost:
                         submission_values.append(submission)
                         print('...', submission.title)
 
-                    sources.update({source: submission_values})
+                    sources.update({source_key: submission_values})
 
         return sources
     
@@ -68,6 +76,7 @@ class CrossPost:
         print('-----')
         print('Searching for posts...')
         for destination, item in self.schema:
+            search = self.is_search(item)
             pattern = re.compile(r'\b({})\b'.format(r'|'.join(item["keywords"])), re.IGNORECASE)
 
             pattern_ignore = None
@@ -77,7 +86,18 @@ class CrossPost:
             print('...', destination)
             for source in item["sources"]:
 
-                for subm in self.sources[source]:
+                throttle = None
+                source_key = source
+                if search:
+                    source_key = destination + '_' + source
+                    throttle = 1
+
+                throttle_count = 1
+                for subm in self.sources[source_key]:
+                    if search:
+                        if throttle < throttle_count:
+                            continue
+
                     self.c.execute('SELECT * FROM posted WHERE subm_id = ?', [subm.id])
                     if self.c.fetchone():  # skip the submission if it's already been posted
                         continue
@@ -90,6 +110,7 @@ class CrossPost:
                     if pattern.search(subm.title):
                         print('      *', source, '--', subm.title)
                         self.submit_post(subm, destination)
+                        throttle_count += 1
 
     def submit_post(self, submission, destination):
         try:
