@@ -1,6 +1,7 @@
 import re
 import sqlite3
 import yaml
+from random import choice
 
 class CrossPost:
 
@@ -76,6 +77,7 @@ class CrossPost:
         print('-----')
         print('Searching for posts...')
         for destination, item in self.schema:
+
             search = self.is_search(item)
             pattern = re.compile(r'\b({})\b'.format(r'|'.join(item["keywords"])), re.IGNORECASE)
 
@@ -85,6 +87,11 @@ class CrossPost:
 
             print('...', destination)
             for source in item["sources"]:
+
+                if "random" in item and item["random"]:
+                    if choice([True, False]):
+                        print('      * RANDOM SKIP')
+                        break
 
                 throttle = None
                 source_key = source
