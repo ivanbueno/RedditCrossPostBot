@@ -38,6 +38,10 @@ class CrossPost:
         source_processed = {}
 
         for destination, item in self.schema:
+            search = None
+            if "search" in item:
+                search = item["search"]
+
             for source in item["sources"]:
                 submission_values = []
 
@@ -45,7 +49,14 @@ class CrossPost:
                     print('-----')
                     print('Loading', source)
                     source_processed[source] = 1
-                    for submission in self.reddit.subreddit(source).hot():
+
+                    submission_results = None
+                    if search:
+                        submission_results = self.reddit.subreddit(source).search(search)
+                    else:
+                        submission_results = self.reddit.subreddit(source).hot()
+
+                    for submission in submission_results:
                         submission_values.append(submission)
                         print('...', submission.title)
 
@@ -58,6 +69,11 @@ class CrossPost:
         print('Searching for posts...')
         for destination, item in self.schema:
             pattern = re.compile(r'\b({})\b'.format(r'|'.join(item["keywords"])), re.IGNORECASE)
+
+            pattern_ignore = None
+            if "ignore" in item:
+                pattern_ignore = re.compile(r'\b({})\b'.format(r'|'.join(item["ignore"])), re.IGNORECASE)
+
             print('...', destination)
             for source in item["sources"]:
 
@@ -66,16 +82,23 @@ class CrossPost:
                     if self.c.fetchone():  # skip the submission if it's already been posted
                         continue
 
+                    if pattern_ignore:
+                        if pattern_ignore.search(subm.title):
+                            continue
+
                     # then search for keywords
                     if pattern.search(subm.title):
                         print('      *', source, '--', subm.title)
                         self.submit_post(subm, destination)
 
     def submit_post(self, submission, destination):
-        crosspost = submission.crosspost(subreddit=destination, send_replies=False)
+        try:
+            crosspost = submission.crosspost(subreddit=destination, send_replies=False)
 
-        # then add the submission id to db
-        self.c.execute('INSERT INTO posted VALUES(?)', [submission.id])
-        self.sql.commit()  # save the changes
+            # then add the submission id to db
+            self.c.execute('INSERT INTO posted VALUES(?)', [submission.id])
+            self.sql.commit()  # save the changes
 
-        self.updates += 1
+            self.updates += 1
+        except Exception as e:
+            print('            ', e.message)
