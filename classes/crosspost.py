@@ -2,6 +2,8 @@ import re
 import sqlite3
 import yaml
 from random import choice
+from discordwebhook import Discord
+from urllib.request import urlopen
 
 class CrossPost:
 
@@ -122,6 +124,8 @@ class CrossPost:
 
                         self.submit_post(subm, destination)
                         throttle_count += 1
+
+                        self.post_to_discord(item, subm.url)
                         
     def is_repost(self, destination, submission):
         submission_results = None
@@ -138,7 +142,31 @@ class CrossPost:
             if subm.url == submission.url:
                 return True
 
-        return False        
+        return False
+
+    def post_to_discord(self, item, url):
+        if "discord" in item:
+
+            if self.is_image(url):
+                discord = Discord(url=item["discord"])
+                discord.post(
+                    embeds=[
+                        {
+                            "image": {"url": url},
+                        }
+                    ],
+                )
+                print('      ** Posted to discord.')
+
+    def is_image(self, url):
+        image_formats = ("image/png", "image/jpeg", "image/gif")
+        site = urlopen(url)
+        meta = site.info()  # get header of the http request
+        if meta["content-type"] in image_formats:  # check if the content-type is a image
+            return True
+
+        return False
+
 
     def submit_post(self, submission, destination):
         try:
