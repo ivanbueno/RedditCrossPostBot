@@ -1,7 +1,7 @@
 import re
 import sqlite3
 import yaml
-from random import choice
+from random import choice, shuffle
 from discordwebhook import Discord
 from urllib.request import urlopen
 
@@ -63,13 +63,18 @@ class CrossPost:
 
                     submission_results = None
                     if search:
-                        submission_results = self.reddit.subreddit(source).search(search)
+                        for s in search:
+                            submission_results = self.reddit.subreddit(source).search(s)
+
+                            for submission in submission_results:
+                                submission_values.append(submission)
+                                print('...', submission.title)
                     else:
                         submission_results = self.reddit.subreddit(source).hot()
 
-                    for submission in submission_results:
-                        submission_values.append(submission)
-                        print('...', submission.title)
+                        for submission in submission_results:
+                            submission_values.append(submission)
+                            print('...', submission.title)
 
                     sources.update({source_key: submission_values})
 
@@ -100,8 +105,11 @@ class CrossPost:
                 if search:
                     source_key = destination + '_' + source
                     throttle = 1
-
                 throttle_count = 1
+
+                if "shuffle" in item:
+                    shuffle(self.sources[source_key])
+
                 for subm in self.sources[source_key]:
                     if search:
                         if throttle < throttle_count:
@@ -120,6 +128,9 @@ class CrossPost:
                         print('      *', source, '--', subm.title)
                         if self.is_repost(destination, subm):
                             print('      ** Duplicate')
+                            # then add the submission id to db
+                            self.c.execute('INSERT INTO posted VALUES(?)', [subm.id])
+                            self.sql.commit()  # save the changes
                             continue
 
                         self.submit_post(subm, destination)
