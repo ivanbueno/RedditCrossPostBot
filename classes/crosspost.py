@@ -138,8 +138,6 @@ class CrossPost:
                             self.marked_as_processed(subm.id)
                             continue
 
-                        # self.submit_post(subm, destination)
-
                         if self.is_image(subm.url):
                             image_url = self.download_image(subm.url)
 
@@ -149,9 +147,11 @@ class CrossPost:
 
                                 self.post_to_discord(item, subm.url)
                             else:
-                               self.marked_as_processed(subm.id)
+                                self.submit_post(subm, destination)
+                                throttle_count += 1
                         else:
-                            self.marked_as_processed(subm.id)
+                            self.submit_post(subm, destination)
+                            throttle_count += 1
 
     def marked_as_processed(self, id):
         self.c.execute('INSERT INTO posted VALUES(?)', [id])
@@ -238,6 +238,7 @@ class CrossPost:
 
     def submit_post(self, submission, destination):
         try:
+            print('      ** Crossposting') 
             crosspost = submission.crosspost(subreddit=destination, send_replies=False)
             self.marked_as_processed(submission.id)
             self.updates += 1
