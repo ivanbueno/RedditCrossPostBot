@@ -4,6 +4,9 @@ import yaml
 from random import choice, shuffle
 from discordwebhook import Discord
 from urllib.request import urlopen
+import requests
+import shutil
+import os
 
 class CrossPost:
 
@@ -121,6 +124,9 @@ class CrossPost:
 
                     if pattern_ignore:
                         if pattern_ignore.search(subm.title):
+                            # then add the submission id to db
+                            print('      ** Ignore')
+                            self.marked_as_processed(subm.id)
                             continue
 
                     # then search for keywords
@@ -129,14 +135,27 @@ class CrossPost:
                         if self.is_repost(destination, subm):
                             print('      ** Duplicate')
                             # then add the submission id to db
-                            self.c.execute('INSERT INTO posted VALUES(?)', [subm.id])
-                            self.sql.commit()  # save the changes
+                            self.marked_as_processed(subm.id)
                             continue
 
-                        self.submit_post(subm, destination)
-                        throttle_count += 1
+                        # self.submit_post(subm, destination)
 
-                        self.post_to_discord(item, subm.url)
+                        if self.is_image(subm.url):
+                            image_url = self.download_image(subm.url)
+
+                            if image_url:
+                                self.post_image(subm, destination, image_url)
+                                throttle_count += 1
+
+                                self.post_to_discord(item, subm.url)
+                            else:
+                               self.marked_as_processed(subm.id)
+                        else:
+                            self.marked_as_processed(subm.id)
+
+    def marked_as_processed(self, id):
+        self.c.execute('INSERT INTO posted VALUES(?)', [id])
+        self.sql.commit()  # save the changes
                         
     def is_repost(self, destination, submission):
         submission_results = None
@@ -171,22 +190,56 @@ class CrossPost:
 
     def is_image(self, url):
         image_formats = ("image/png", "image/jpeg", "image/gif")
-        site = urlopen(url)
-        meta = site.info()  # get header of the http request
-        if meta["content-type"] in image_formats:  # check if the content-type is a image
-            return True
+        site = ""
+        try:
+            site = urlopen(url)
 
-        return False
+            meta = site.info()  # get header of the http request
 
+            if meta["content-type"] in image_formats:  # check if the content-type is a image
+                return True
+
+            print('      ** Not an image')
+            return False
+        except Exception as e:
+            print('      ** Cannot fetch image')
+            return False
+
+    def download_image(self, image_url):
+        filename = image_url.split("/")[-1]
+
+        # Open the url image, set stream to True, this will return the stream content.
+        r = requests.get(image_url, stream = True)
+
+        # Check if the image was retrieved successfully
+        if r.status_code == 200:
+            # Set decode_content value to True, otherwise the downloaded image file's size will be zero.
+            r.raw.decode_content = True
+            
+            # Open a local file with wb ( write binary ) permission.
+            with open(filename,'wb') as f:
+                shutil.copyfileobj(r.raw, f)
+                
+            return os.path.realpath(f.name)
+        else:
+            return False
+
+    def post_image(self, submission, destination, url):
+
+        try:
+            self.reddit.subreddit(destination).submit_image(title=submission.title, image_path=url, send_replies=False, without_websockets=True)
+            os.remove(url)
+
+            self.marked_as_processed(submission.id)
+
+            self.updates += 1
+        except Exception as e:
+            print('            ', e.message)
 
     def submit_post(self, submission, destination):
         try:
             crosspost = submission.crosspost(subreddit=destination, send_replies=False)
-
-            # then add the submission id to db
-            self.c.execute('INSERT INTO posted VALUES(?)', [submission.id])
-            self.sql.commit()  # save the changes
-
+            self.marked_as_processed(submission.id)
             self.updates += 1
         except Exception as e:
             print('            ', e.message)
