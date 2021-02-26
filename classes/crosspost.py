@@ -234,7 +234,7 @@ class CrossPost:
 
             self.updates += 1
         except Exception as e:
-            print('            ', e.message)
+            print('            ', e)
 
     def submit_post(self, submission, destination):
         try:
@@ -243,4 +243,4 @@ class CrossPost:
             self.marked_as_processed(submission.id)
             self.updates += 1
         except Exception as e:
-            print('            ', e.message)
+            print('            ', e)
