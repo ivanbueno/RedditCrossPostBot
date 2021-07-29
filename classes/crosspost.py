@@ -67,13 +67,13 @@ class CrossPost:
                     submission_results = None
                     if search:
                         for s in search:
-                            submission_results = self.reddit.subreddit(source).search(s)
+                            submission_results = self.reddit.subreddit(source).search(s, limit=None)
 
                             for submission in submission_results:
                                 submission_values.append(submission)
                                 print('...', submission.title)
                     else:
-                        submission_results = self.reddit.subreddit(source).hot()
+                        submission_results = self.reddit.subreddit(source).hot(limit=None)
 
                         for submission in submission_results:
                             submission_values.append(submission)
